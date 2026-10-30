@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SafeClick - Link Security</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f1f5f9;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+}
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 18px;
+  width: 90%;
+  max-width: 420px;
+  text-align: center;
+  box-shadow: 0 5px 25px #0001;
+}
+h1 { color: #2563eb; }
+input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 15px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  margin: 15px 0;
+}
+button {
+  width: 100%;
+  padding: 15px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+}
+#result {
+  margin-top: 20px;
+  overflow-wrap: anywhere;
+}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>🛡️ SafeClick</h1>
+<p>Check a link before you click.</p>
+
+<input id="link" placeholder="Paste website link here">
+
+<button onclick="checkLink()">Check Safety</button>
+
+<div id="result"></div>
+</div>
+
+<script>
+async function checkLink() {
+  const input = document.getElementById("link").value.trim();
+  const result = document.getElementById("result");
+
+  if (!input) {
+    result.textContent = "Please enter a link.";
+    return;
+  }
+
+  let url;
+
+  try {
+    url = new URL(
+      /^[a-z]+:/i.test(input) ? input : "https://" + input
+    );
+
+    if (!["http:", "https:"].includes(url.protocol) ||
+        !url.hostname.includes(".") ||
+        url.username || url.password) {
+      throw new Error();
+    }
+  } catch {
+    result.textContent = "Invalid website address.";
+    return;
+  }
+
+  result.textContent = "Checking security...";
+
+  try {
+    const response = await fetch("/api/check-url", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({url: url.href})
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Security check unavailable.");
+    }
+
+    if (!data.configured) {
+      result.textContent =
+        "Live security scanning is not configured yet.";
+    } else if (data.malicious) {
+      result.textContent =
+        "🚨 WARNING! Known malicious link detected. Do not open.";
+    } else {
+      result.textContent =
+        "No known threat detected. This does not guarantee safety.";
+    }
+
+  } catch (error) {
+    result.textContent =
+      "⚠️ Security check unavailable. Do not assume this link is safe.";
+  }
+}
+</script>
+</body>
+</html>
