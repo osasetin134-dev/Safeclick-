@@ -571,8 +571,10 @@ async function checkDomainAge(domain) {
     };
 }
 
-/* DNS ANALYSIS WITH BACKUP DNS-OVER-HTTPS PROVIDERS */
+/* DNS ANALYSIS WITH BACKUP DNS-OVER-HTTPS PROVIDERS AND DIAGNOSTIC LOGGING */
 async function checkDNS(domain) {
+    const failures = [];
+
     try {
         const records = await dns.lookup(domain, {
             all: true,
@@ -586,8 +588,9 @@ async function checkDNS(domain) {
                 method: "system DNS"
             };
         }
-    } catch {
-        // Fall through to independent DNS-over-HTTPS providers.
+        failures.push("system DNS returned no records");
+    } catch (error) {
+        failures.push(`system DNS: ${error.code || error.name || "lookup failed"}`);
     }
 
     const providers = [
@@ -597,18 +600,22 @@ async function checkDNS(domain) {
     const addresses = new Set();
 
     for (const provider of providers) {
+        const providerName = provider.includes("cloudflare") ? "Cloudflare" : "Google";
         try {
             for (const type of ["A", "AAAA"]) {
-                const separator = provider.includes("?") ? "&" : "?";
-                const endpoint = provider + separator +
-                    "name=" + encodeURIComponent(domain) + "&type=" + type;
+                const endpoint = provider + "?name=" +
+                    encodeURIComponent(domain) + "&type=" + type;
                 const response = await fetch(endpoint, {
-                    signal: AbortSignal.timeout(5000),
+                    signal: AbortSignal.timeout(8000),
                     headers: provider.includes("cloudflare")
                         ? { Accept: "application/dns-json" }
                         : { Accept: "application/json" }
                 });
-                if (!response.ok) continue;
+
+                if (!response.ok) {
+                    failures.push(`${providerName} ${type}: HTTP ${response.status}`);
+                    continue;
+                }
 
                 const data = await response.json();
                 for (const answer of data.Answer || []) {
@@ -622,16 +629,15 @@ async function checkDNS(domain) {
                 return {
                     available: true,
                     addresses: [...addresses],
-                    method: provider.includes("cloudflare")
-                        ? "Cloudflare DNS-over-HTTPS"
-                        : "Google DNS-over-HTTPS"
+                    method: `${providerName} DNS-over-HTTPS`
                 };
             }
-        } catch {
-            // Try the next DNS provider.
+        } catch (error) {
+            failures.push(`${providerName}: ${error.code || error.name || "request failed"}`);
         }
     }
 
+    console.warn(`[SafeClick DNS] Lookup failed for ${domain}: ${failures.join("; ")}`);
     return {
         available: false,
         message: "DNS records could not be retrieved from the system or backup DNS providers."
