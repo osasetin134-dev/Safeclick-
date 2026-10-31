@@ -520,66 +520,58 @@ app.post("/api/scam-reports", authenticate, async (req, res) => {
 });
 /* DOMAIN AGE */
 async function checkDomainAge(domain) {
-    try {
-        const response = await fetch(
-            "https://rdap.org/domain/" + encodeURIComponent(domain),
-            { signal: AbortSignal.timeout(8000) }
+    const endpoints = [
+        "https://rdap.org/domain/" + encodeURIComponent(domain)
+    ];
+
+    // Verisign provides an authoritative RDAP endpoint for .com and .net.
+    const tld = domain.split(".").pop();
+    if (tld === "com" || tld === "net") {
+        endpoints.push(
+            "https://rdap.verisign.com/" + tld + "/v1/domain/" + encodeURIComponent(domain)
         );
-
-        if (!response.ok) {
-            return {
-                available: false,
-                message: "Domain registration information unavailable."
-            };
-        }
-
-        const data = await response.json();
-        const event = (data.events || []).find(
-            item => item.eventAction === "registration"
-        );
-
-        if (!event) {
-            return {
-                available: false,
-                message: "Registration date not found."
-            };
-        }
-
-        const registrationDate = new Date(event.eventDate);
-
-        if (Number.isNaN(registrationDate.getTime())) {
-            return {
-                available: false,
-                message: "Invalid registration date."
-            };
-        }
-
-        const ageDays = Math.floor(
-            (Date.now() - registrationDate.getTime()) / 86400000
-        );
-
-        if (ageDays < 0) {
-            return {
-                available: false,
-                message: "Registration date could not be verified."
-            };
-        }
-
-        return {
-            available: true,
-            registered: registrationDate.toISOString(),
-            ageDays,
-            ageYears: Math.floor(ageDays / 365)
-        };
-    } catch {
-        return {
-            available: false,
-            message: "Could not retrieve domain age."
-        };
     }
+
+    for (const endpoint of endpoints) {
+        try {
+            const response = await fetch(endpoint, {
+                signal: AbortSignal.timeout(7000),
+                headers: { Accept: "application/rdap+json, application/json" }
+            });
+            if (!response.ok) continue;
+
+            const data = await response.json();
+            const event = (data.events || []).find(
+                item => item.eventAction === "registration"
+            );
+            if (!event) continue;
+
+            const registrationDate = new Date(event.eventDate);
+            if (Number.isNaN(registrationDate.getTime())) continue;
+
+            const ageDays = Math.floor(
+                (Date.now() - registrationDate.getTime()) / 86400000
+            );
+            if (ageDays < 0) continue;
+
+            return {
+                available: true,
+                registered: registrationDate.toISOString(),
+                ageDays,
+                ageYears: Math.floor(ageDays / 365)
+            };
+        } catch {
+            // Try the next RDAP provider before reporting unavailable.
+        }
+    }
+
+    return {
+        available: false,
+        message: "Domain registration information could not be retrieved from available RDAP services."
+    };
 }
 
-/* DNS ANALYSIS */
+/* DNS ANALYSIS WITH BACKUP DNS-OVER-HTTPS PROVIDERS */
 async function checkDNS(domain) {
     try {
         const records = await dns.lookup(domain, {
@@ -587,18 +579,63 @@ async function checkDNS(domain) {
             verbatim: true
         });
 
-        if (!records.length) throw new Error("No DNS records found.");
-
-        return {
-            available: true,
-            addresses: records.map(record => record.address)
-        };
+        if (records.length) {
+            return {
+                available: true,
+                addresses: [...new Set(records.map(record => record.address))],
+                method: "system DNS"
+            };
+        }
     } catch {
-        return {
-            available: false,
-            message: "DNS records could not be retrieved."
-        };
+        // Fall through to independent DNS-over-HTTPS providers.
     }
+
+    const providers = [
+        "https://cloudflare-dns.com/dns-query",
+        "https://dns.google/resolve"
+    ];
+    const addresses = new Set();
+
+    for (const provider of providers) {
+        try {
+            for (const type of ["A", "AAAA"]) {
+                const separator = provider.includes("?") ? "&" : "?";
+                const endpoint = provider + separator +
+                    "name=" + encodeURIComponent(domain) + "&type=" + type;
+                const response = await fetch(endpoint, {
+                    signal: AbortSignal.timeout(5000),
+                    headers: provider.includes("cloudflare")
+                        ? { Accept: "application/dns-json" }
+                        : { Accept: "application/json" }
+                });
+                if (!response.ok) continue;
+
+                const data = await response.json();
+                for (const answer of data.Answer || []) {
+                    if ((answer.type === 1 || answer.type === 28) && answer.data) {
+                        addresses.add(answer.data);
+                    }
+                }
+            }
+
+            if (addresses.size) {
+                return {
+                    available: true,
+                    addresses: [...addresses],
+                    method: provider.includes("cloudflare")
+                        ? "Cloudflare DNS-over-HTTPS"
+                        : "Google DNS-over-HTTPS"
+                };
+            }
+        } catch {
+            // Try the next DNS provider.
+        }
+    }
+
+    return {
+        available: false,
+        message: "DNS records could not be retrieved from the system or backup DNS providers."
+    };
 }
 
 /* SSL CERTIFICATE */
