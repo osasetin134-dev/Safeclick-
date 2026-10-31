@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#071426">
+<title>SafeClick — Advanced Website Security</title>
+<style>
+:root {
+  --bg:#071426; --panel:#0e2038; --panel2:#122945;
+  --blue:#38bdf8; --green:#34d399; --red:#fb7185;
+  --yellow:#fbbf24; --text:#edf6ff; --muted:#91a8c2;
+  --border:rgba(148,180,210,.16);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:radial-gradient(circle at 50% -15%,#173d63 0,transparent 42%),var(--bg);
+  color:var(--text);font-family:Inter,system-ui,-apple-system,Arial,sans-serif;
+  min-height:100vh;
+}
+button,input{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px max(5%,calc((100% - 1120px)/2));
+  border-bottom:1px solid var(--border);background:rgba(7,20,38,.88);
+  position:sticky;top:0;z-index:5;backdrop-filter:blur(14px)
+}
+.brand{display:flex;align-items:center;gap:11px;font-weight:850;font-size:22px}
+.logo{
+  width:40px;height:40px;border-radius:13px;display:grid;place-items:center;
+  background:linear-gradient(135deg,#38bdf8,#2563eb);font-size:22px
+}
+.brand span{color:var(--blue)}
+.topnote{font-size:12px;color:var(--muted)}
+.container{width:min(100% - 32px,1000px);margin:0 auto}
+.hero{text-align:center;padding:65px 12px 35px}
+.badge{
+  display:inline-block;padding:8px 13px;border:1px solid #1e5578;
+  border-radius:30px;color:#7dd3fc;background:#0c2942;font-size:12px;
+  letter-spacing:.5px
+}
+.hero h1{font-size:clamp(34px,7vw,60px);line-height:1.08;margin:20px 0 14px;letter-spacing:-2px}
+.hero h1 span{color:var(--blue)}
+.hero p{color:var(--muted);max-width:600px;margin:auto;line-height:1.7}
+.card{
+  background:linear-gradient(145deg,rgba(18,41,69,.98),rgba(11,29,51,.98));
+  border:1px solid var(--border);border-radius:20px;padding:25px;
+  box-shadow:0 22px 65px rgba(0,0,0,.22)
+}
+.authbox{max-width:460px;margin:20px auto 70px}
+h2{margin:0 0 18px}
+label{display:block;font-size:13px;color:#c5d7e9;margin:15px 0 8px}
+input{
+  width:100%;padding:15px;border-radius:11px;border:1px solid #29445f;
+  background:#081a2d;color:white;outline:none
+}
+input:focus{border-color:var(--blue);box-shadow:0 0 0 3px #38bdf822}
+.btn{
+  border:0;border-radius:11px;padding:14px 18px;font-weight:800;
+  background:linear-gradient(120deg,#38bdf8,#2563eb);color:#041426
+}
+.btn:hover{filter:brightness(1.1)}
+.btn:disabled{opacity:.55}
+.full{width:100%;margin-top:18px}
+.linkbtn{border:0;background:none;color:var(--blue);padding:12px}
+.notice{font-size:13px;color:var(--muted);line-height:1.6}
+.message{padding:12px;border-radius:10px;margin-top:14px;font-size:13px}
+.error{background:#451d2a;color:#fecdd3}
+.success{background:#103c31;color:#a7f3d0}
+.app{padding:35px 0 70px}
+.welcome{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:25px}
+.welcome p{color:var(--muted);margin:5px 0}
+.logout{background:#263b52;color:white;border:1px solid var(--border);padding:10px 14px;border-radius:10px}
+.tabs{display:flex;gap:9px;overflow:auto;margin:0 0 20px;padding-bottom:5px}
+.tab{white-space:nowrap;padding:11px 16px;border:1px solid var(--border);border-radius:10px;background:#10243b;color:#b7cbe0}
+.tab.active{background:#16466a;color:#7dd3fc;border-color:#2679a7}
+.scan-title{text-align:center;padding:12px 0 22px}
+.scan-title h2{font-size:26px;margin-bottom:8px}
+.scan-title p{color:var(--muted);font-size:14px}
+.scanrow{display:flex;gap:10px}
+.scanrow input{flex:1;min-width:0;font-size:15px}
+.scanrow button{min-width:115px}
+.smallhint{font-size:12px;color:var(--muted);line-height:1.6;margin-top:13px}
+.result{margin-top:22px;border:1px solid var(--border);border-radius:15px;padding:20px;background:#091a2d}
+.riskhead{display:flex;align-items:center;justify-content:space-between;gap:15px}
+.risklabel{font-weight:850;font-size:20px}
+.score{font-size:32px;font-weight:900;color:var(--blue)}
+.pill{font-size:11px;padding:6px 10px;border-radius:20px;background:#243b54;color:#d8e8f8}
+.high{color:#fda4af}.medium{color:#fcd34d}.low{color:#6ee7b7}.inconclusive{color:#93c5fd}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px}
+.metric{background:#10243b;border:1px solid var(--border);padding:14px;border-radius:12px;min-width:0}
+.metric strong{display:block;font-size:13px;margin-bottom:7px}
+.metric span{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.result h3{font-size:15px;margin:22px 0 10px}
+.result ul{padding-left:20px;color:#c4d5e6;font-size:13px;line-height:1.8}
+.disclaimer{font-size:12px;color:var(--muted);line-height:1.6;margin-top:18px}
+.panel{margin-top:20px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{text-align:left;padding:12px 9px;border-bottom:1px solid var(--border);overflow-wrap:anywhere}
+th{color:#7dd3fc}
+.tablewrap{overflow-x:auto}
+.loading{color:var(--blue);font-size:13px;margin-top:14px}
+footer{text-align:center;padding:25px 15px;color:#7189a4;font-size:12px;border-top:1px solid var(--border)}
+@media(max-width:600px){
+ .hero{padding-top:45px}.card{padding:18px}
+ .scanrow{flex-direction:column}.scanrow button{width:100%}
+ .grid{grid-template-columns:1fr}
+ .welcome{align-items:flex-start}
+ .topnote{display:none}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand"><div class="logo">🛡️</div>Safe<span>Click</span></div>
+  <div class="topnote">ADVANCED WEBSITE SECURITY</div>
+</header>
+
+<section id="authSection" class="container">
+  <div class="hero">
+    <div class="badge">🛡️ YOUR FIRST LINE OF ONLINE DEFENCE</div>
+    <h1>Don't just click.<br><span>Check first.</span></h1>
+    <p>Analyse suspicious links, identify phishing indicators and understand website security risks before you trust a website.</p>
+  </div>
+
+  <div class="card authbox">
+    <h2 id="authTitle">Welcome back</h2>
+    <p class="notice" id="authDescription">Log in to your SafeClick security dashboard.</p>
+
+    <form id="authForm">
+      <div id="nameField" class="hidden">
+        <label for="authName">Full name</label>
+        <input id="authName" autocomplete="name" placeholder="Your name">
+      </div>
+      <label for="authEmail">Email address</label>
+      <input id="authEmail" type="email" autocomplete="email" required placeholder="you@example.com">
+      <label for="authPassword">Password</label>
+      <input id="authPassword" type="password" autocomplete="current-password" required placeholder="Enter your password">
+      <button class="btn full" id="authButton" type="submit">Log in</button>
+    </form>
+    <div id="authMessage"></div>
+    <p class="notice" style="text-align:center;margin-top:18px">
+      <span id="switchText">New to SafeClick?</span>
+      <button class="linkbtn" id="switchAuth" type="button">Create an account</button>
+    </p>
+  </div>
+</section>
+
+<section id="appSection" class="container app hidden">
+  <div class="welcome">
+    <div>
+      <h2 id="welcomeName">Your dashboard</h2>
+      <p id="welcomeEmail"></p>
+    </div>
+    <button class="logout" id="logoutButton">Log out</button>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab active" data-page="scanner">🔎 Scanner</button>
+    <button class="tab" data-page="history">🕘 Scan history</button>
+    <button class="tab hidden" id="adminTab" data-page="admin">⚙️ Admin centre</button>
+  </nav>
+
+  <section id="scannerPage">
+    <div class="card">
+      <div class="scan-title">
+        <h2>Website security scanner</h2>
+        <p>Paste a link below to analyse its security signals.</p>
+      </div>
+      <form id="scanForm">
+        <label for="urlInput">Website URL</label>
+        <div class="scanrow">
+          <input id="urlInput" type="text" inputmode="url" placeholder="https://example.com" required maxlength="2048">
+          <button class="btn" id="scanButton" type="submit">Scan website</button>
+        </div>
+      </form>
+      <p class="smallhint">SafeClick checks available phishing intelligence, domain registration age, DNS, SSL certificate and existing reputation information. The scanner does not open the submitted website.</p>
+      <div id="scanMessage"></div>
+      <div id="scanResult"></div>
+    </div>
+  </section>
+
+  <section id="historyPage" class="hidden panel">
+    <div class="card">
+      <h2>Your scan history</h2>
+      <div id="historyContent" class="tablewrap">Loading your scans…</div>
+    </div>
+  </section>
+
+  <section id="adminPage" class="hidden panel">
+    <div class="card">
+      <h2>Admin control centre</h2>
+      <div id="adminContent">Loading administration data…</div>
+    </div>
+  </section>
+</section>
+
+<footer>SafeClick © 2026 · Think before you click. Check before you trust.</footer>
+<script>
+const $ = id => document.getElementById(id);
+
+let token = localStorage.getItem("safeclick_token") || "";
+let currentUser = null;
+let isRegistering = false;
+
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;",
+    '"':"&quot;", "'":"&#39;"
+  })[char]);
+}
+
+async function api(path, options = {}) {
+  const response = await fetch(path, {
+    ...options,
+    headers: {
+      "Content-Type":"application/json",
+      ...(token ? {"Authorization":"Bearer " + token} : {}),
+      ...(options.headers || {})
+    }
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    if (response.status === 401) logout();
+    throw new Error(data.error || "Something went wrong.");
+  }
+
+  return data;
+}
+
+function showMessage(id, message, type = "error") {
+  $(id).innerHTML = message
+    ? `<div class="message ${type}">${escapeHTML(message)}</div>`
+    : "";
+}
+
+function setAuthMode(registering) {
+  isRegistering = registering;
+
+  $("authTitle").textContent = registering ? "Create your account" : "Welcome back";
+  $("authDescription").textContent = registering
+    ? "Join SafeClick and protect yourself online."
+    : "Log in to your SafeClick security dashboard.";
+
+  $("nameField").classList.toggle("hidden", !registering);
+  $("authName").required = registering;
+  $("authPassword").autocomplete = registering ? "new-password" : "current-password";
+  $("authButton").textContent = registering ? "Create account" : "Log in";
+  $("switchText").textContent = registering ? "Already have an account?" : "New to SafeClick?";
+  $("switchAuth").textContent = registering ? "Log in" : "Create an account";
+  showMessage("authMessage", "");
+}
+
+$("switchAuth").addEventListener("click", () => {
+  setAuthMode(!isRegistering);
+});
+
+$("authForm").addEventListener("submit", async event => {
+  event.preventDefault();
+
+  const button = $("authButton");
+  button.disabled = true;
+  button.textContent = "Please wait…";
+
+  try {
+    const body = {
+      email: $("authEmail").value.trim(),
+      password: $("authPassword").value
+    };
+
+    if (isRegistering) {
+      body.name = $("authName").value.trim();
+
+      const result = await api("/api/register", {
+        method:"POST",
+        body:JSON.stringify(body)
+      });
+
+      showMessage("authMessage", result.message || "Account created. Please log in.", "success");
+      setAuthMode(false);
+      $("authPassword").value = "";
+    } else {
+      const result = await api("/api/login", {
+        method:"POST",
+        body:JSON.stringify(body)
+      });
+
+      token = result.token;
+      localStorage.setItem("safeclick_token", token);
+      currentUser = result.user;
+      showDashboard();
+    }
+  } catch (error) {
+    showMessage("authMessage", error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = isRegistering ? "Create account" : "Log in";
+  }
+});
+
+function showDashboard() {
+  $("authSection").classList.add("hidden");
+  $("appSection").classList.remove("hidden");
+
+  $("welcomeName").textContent = "Welcome, " + (currentUser?.name || "User");
+  $("welcomeEmail").textContent = currentUser?.email || "";
+
+  $("adminTab").classList.toggle("hidden", currentUser?.role !== "admin");
+
+  openPage("scanner");
+}
+
+function logout() {
+  token = "";
+  currentUser = null;
+  localStorage.removeItem("safeclick_token");
+
+  $("appSection").classList.add("hidden");
+  $("authSection").classList.remove("hidden");
+  $("scanResult").innerHTML = "";
+  $("scanMessage").innerHTML = "";
+  $("authPassword").value = "";
+}
+
+$("logoutButton").addEventListener("click", logout);
+
+async function restoreSession() {
+  if (!token) return;
+
+  try {
+    const profile = await api("/api/profile");
+    currentUser = profile;
+    showDashboard();
+  } catch (error) {
+    console.log("Session could not be restored:", error.message);
+    logout();
+  }
+}
+
+function openPage(page) {
+  ["scanner", "history", "admin"].forEach(name => {
+    $(name + "Page").classList.toggle("hidden", name !== page);
+  });
+
+  document.querySelectorAll(".tab").forEach(button => {
+    button.classList.toggle("active", button.dataset.page === page);
+  });
+
+  if (page === "history") loadHistory();
+  if (page === "admin") loadAdmin();
+}
+
+document.querySelectorAll(".tab").forEach(button => {
+  button.addEventListener("click", () => {
+    if (button.dataset.page === "admin" && currentUser?.role !== "admin") {
+      return;
+    }
+    openPage(button.dataset.page);
+  });
+});
+
+function normalizeURL(value) {
+  value = value.trim();
+
+  if (!value) throw new Error("Enter a website address.");
+
+  if (!/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(value)) {
+    value = "https://" + value;
+  }
+
+  let parsed;
+
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error("Enter a valid website address.");
+  }
+
+  if (!["http:", "https:"].includes(parsed.protocol)) {
+    throw new Error("Only HTTP and HTTPS links are supported.");
+  }
+
+  if (!parsed.hostname || !parsed.hostname.includes(".")) {
+    throw new Error("Enter a complete domain, such as example.com.");
+  }
+
+  if (parsed.username || parsed.password) {
+    throw new Error("Remove embedded login details from this link.");
+  }
+
+  return parsed;
+}
+
+function displayAnalysis(analysis) {
+  const risk = analysis.risk || {};
+  const level = String(risk.level || "INCONCLUSIVE").toUpperCase();
+
+  const riskClass = level.toLowerCase();
+  const checks = [
+    ["Phishing intelligence", analysis.phishing?.message],
+    ["Domain registration", analysis.domainAge?.message ||
+      (analysis.domainAge?.ageDays != null
+        ? "Domain age: " + analysis.domainAge.ageDays + " days"
+        : "Not available")],
+    ["DNS information", analysis.dns?.message],
+    ["SSL certificate", analysis.ssl?.message],
+    ["Website reputation", analysis.reputation?.message ||
+      (analysis.reputation?.available
+        ? "Malicious detections: " + analysis.reputation.malicious
+        : "Not available")],
+    ["Community reports", analysis.communityReports?.message]
+  ];
+
+  const warnings = Array.isArray(analysis.warnings)
+    ? analysis.warnings
+    : [];
+
+  $("scanResult").innerHTML = `
+    <div class="result">
+      <div class="riskhead">
+        <div>
+          <div class="pill">SECURITY ANALYSIS</div>
+          <p class="risklabel ${riskClass}">${escapeHTML(level)} RISK</p>
+          <div class="notice">${escapeHTML(analysis.domain || "")}</div>
+        </div>
+        <div class="score">${Number(risk.score || 0)}/100</div>
+      </div>
+
+      <div class="metric" style="margin-top:15px">
+        <strong>Analysis coverage</strong>
+        <span>${Number(analysis.analysisCoverage?.percentage || 0)}% of available checks completed</span>
+      </div>
+
+      <h3>Security checks</h3>
+      <div class="grid">
+        ${checks.map(([name, value]) => `
+          <div class="metric">
+            <strong>${escapeHTML(name)}</strong>
+            <span>${escapeHTML(value || "Information unavailable")}</span>
+          </div>
+        `).join("")}
+      </div>
+
+      <h3>Findings and warnings</h3>
+      <ul>
+        ${warnings.length
+          ? warnings.map(item => `<li>${escapeHTML(item)}</li>`).join("")
+          : "<li>No warning indicators were returned.</li>"}
+      </ul>
+
+      <p class="disclaimer">${escapeHTML(analysis.disclaimer || "A low risk result does not guarantee that a website is safe.")}</p>
+      <p class="disclaimer">Checked: ${escapeHTML(analysis.analysisDate || "Date unavailable")}</p>
+    </div>
+  `;
+}
+
+$("scanForm").addEventListener("submit", async event => {
+  event.preventDefault();
+
+  const button = $("scanButton");
+  $("scanResult").innerHTML = "";
+  showMessage("scanMessage", "");
+
+  let url;
+
+  try {
+    url = normalizeURL($("urlInput").value);
+  } catch (error) {
+    showMessage("scanMessage", error.message);
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Analysing…";
+
+  $("scanMessage").innerHTML =
+    '<div class="loading">Checking available security information. Please wait…</div>';
+
+  try {
+    const data = await api("/api/check-url", {
+      method:"POST",
+      body:JSON.stringify({url:url.href})
+    });
+
+    if (!data.analysis) {
+      throw new Error(data.message || "No analysis information was returned.");
+    }
+
+    showMessage("scanMessage", "Analysis completed.", "success");
+    displayAnalysis(data.analysis);
+  } catch (error) {
+    showMessage("scanMessage", error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Scan website";
+  }
+});
+
+async function loadHistory() {
+  $("historyContent").innerHTML = "Loading scan history…";
+
+  try {
+    const data = await api("/api/scan-history");
+    const scans = data.scans || [];
+
+    if (!scans.length) {
+      $("historyContent").innerHTML = "<p class='notice'>You haven't scanned any websites yet.</p>";
+      return;
+    }
+
+    $("historyContent").innerHTML = `
+      <table>
+        <thead>
+          <tr><th>Website</th><th>Result</th><th>Date</th></tr>
+        </thead>
+        <tbody>
+          ${scans.map(scan => `
+            <tr>
+              <td>${escapeHTML(scan.url)}</td>
+              <td>${scan.malicious
+                ? '<span class="high">Threat detected</span>'
+                : '<span class="low">No known threat recorded</span>'}</td>
+              <td>${escapeHTML(new Date(scan.created_at).toLocaleString())}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+      <p class="disclaimer">Historical results are not a guarantee of current website safety.</p>
+    `;
+  } catch (error) {
+    $("historyContent").textContent = error.message;
+  }
+}
+
+async function loadAdmin() {
+  // Admin dashboard functions continue in Part 3.
+  $("adminContent").innerHTML = "Preparing admin dashboard…";
+}
+</script>
+<script>
+/* SAFCLICK ADMIN DASHBOARD */
+
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, function(char) {
+        return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        }[char];
+    });
+}
+
+function formatDate(value) {
+    if (!value) return "—";
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return "—";
+    return date.toLocaleString();
+}
+
+function adminTable(headers, rows) {
+    if (!rows || !rows.length) {
+        return '<p class="muted">No records available yet.</p>';
+    }
+
+    return `
+        <div class="tablewrap">
+            <table>
+                <thead>
+                    <tr>${headers.map(h => `<th>${escapeHTML(h)}</th>`).join("")}</tr>
+                </thead>
+                <tbody>
+                    ${rows.join("")}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+loadAdmin = async function() {
+    const container = document.getElementById("adminContent");
+
+    if (!container) return;
+
+    container.innerHTML = '<div class="card"><p>Loading admin dashboard...</p></div>';
+
+    try {
+        const [overviewData, usersData, scansData, reportsData] =
+            await Promise.all([
+                api("/api/admin/overview"),
+                api("/api/admin/users"),
+                api("/api/admin/scans"),
+                api("/api/admin/reports")
+            ]);
+
+        const overview = overviewData.overview || {};
+        const users = usersData.users || [];
+        const scans = scansData.scans || [];
+        const reports = reportsData.reports || [];
+
+        container.innerHTML = `
+            <div class="card">
+                <div class="sectionhead">
+                    <div>
+                        <h2>SafeClick Admin Centre</h2>
+                        <p>Monitor users, website scans and community reports.</p>
+                    </div>
+                    <button class="btn" id="refreshAdmin">Refresh</button>
+                </div>
+
+                <div class="grid">
+                    <div class="metric">
+                        <span>Total Users</span>
+                        <h2>${escapeHTML(overview.totalUsers ?? 0)}</h2>
+                    </div>
+
+                    <div class="metric">
+                        <span>Total Scans</span>
+                        <h2>${escapeHTML(overview.totalScans ?? 0)}</h2>
+                    </div>
+
+                    <div class="metric">
+                        <span>Total Reports</span>
+                        <h2>${escapeHTML(overview.totalReports ?? 0)}</h2>
+                    </div>
+
+                    <div class="metric">
+                        <span>Pending Reports</span>
+                        <h2>${escapeHTML(overview.pendingReports ?? 0)}</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Registered Users</h2>
+                ${adminTable(
+                    ["Name", "Email", "Plan", "Role", "Joined"],
+                    users.map(user => `
+                        <tr>
+                            <td>${escapeHTML(user.name)}</td>
+                            <td>${escapeHTML(user.email)}</td>
+                            <td>${escapeHTML(user.plan)}</td>
+                            <td>${escapeHTML(user.role)}</td>
+                            <td>${escapeHTML(formatDate(user.created_at))}</td>
+                        </tr>
+                    `)
+                )}
+            </div>
+
+            <div class="card">
+                <h2>Website Scan Activity</h2>
+                ${adminTable(
+                    ["Website", "Risk", "Result", "Date"],
+                    scans.map(scan => `
+                        <tr>
+                            <td>${escapeHTML(scan.url || scan.domain || "—")}</td>
+                            <td>${escapeHTML(scan.risk_level || scan.risk || "—")}</td>
+                            <td>${escapeHTML(scan.result || scan.status || "—")}</td>
+                            <td>${escapeHTML(formatDate(scan.created_at))}</td>
+                        </tr>
+                    `)
+                )}
+            </div>
+
+            <div class="card">
+                <h2>Community Reports</h2>
+                ${adminTable(
+                    ["Website", "Category", "Status", "Date"],
+                    reports.map(report => `
+                        <tr>
+                            <td>${escapeHTML(report.domain || report.url || "—")}</td>
+                            <td>${escapeHTML(report.category || "—")}</td>
+                            <td>${escapeHTML(report.status || "—")}</td>
+                            <td>${escapeHTML(formatDate(report.created_at))}</td>
+                        </tr>
+                    `)
+                )}
+            </div>
+        `;
+
+        document.getElementById("refreshAdmin").addEventListener("click", loadAdmin);
+
+    } catch (error) {
+        container.innerHTML = `
+            <div class="card">
+                <h2>Admin dashboard unavailable</h2>
+                <p>${escapeHTML(error.message || "Could not load admin information.")}</p>
+                <button class="btn" onclick="loadAdmin()">Try Again</button>
+            </div>
+        `;
+    }
+};
+
+/* Restore an existing login session */
+restoreSession().catch(function(error) {
+    console.log("Session restoration:", error.message);
+});
+</script>
+</body>
+</html>
